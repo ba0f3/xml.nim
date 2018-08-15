@@ -25,14 +25,12 @@ type
   XmlToken* = object
     kind*: TokenKind
     text*: string
-    start*: int
 
 template error(message: string) =
   raise newException(XmlParserException, message)
 
-proc token(kind: TokenKind, start: int, text = ""): XmlToken =
+proc token(kind: TokenKind, text = ""): XmlToken =
   result.kind = kind
-  result.start = start
   result.text = text
 
 template skip_until(c: char) =
@@ -78,7 +76,7 @@ iterator tokens*(input: string): XmlToken {.inline.} =
             # CDATA
             is_cdata = true
             is_text = true
-            yield token(CDATA_BEGIN, pos-2, input[pos-2..pos+6])
+            yield token(CDATA_BEGIN)
             inc(pos, 6)
           elif input[pos..pos+1] == "--":
             # skips comment
@@ -89,11 +87,11 @@ iterator tokens*(input: string): XmlToken {.inline.} =
           else:
             error(fmt"text expected, found ""{input[pos]}"" at {pos}")
         of '/':
-          yield token(TAG_CLOSE, pos-1, input[pos-1..pos])
+          yield token(TAG_CLOSE)
           is_text = false
         else:
           dec(pos)
-          yield token(TAG_BEGIN, pos, $input[pos])
+          yield token(TAG_BEGIN)
           is_text = false
         inc(pos)
     of ']':
@@ -101,25 +99,25 @@ iterator tokens*(input: string): XmlToken {.inline.} =
         error(fmt"cdata end ""]]>"" expected, found {input[pos..pos+2]} at {pos}")
       is_text =  true
       is_cdata = false
-      yield token(CDATA_END, pos, input[pos..pos+2])
+      yield token(CDATA_END)
       inc(pos, 3)
     of '\'', '"':
       inc(pos)
       var next_ch = input.find(ch, pos)
       if next_ch == -1:
         error(fmt"unable to find matching string quote last found {pos}") 
-      yield token(STRING, pos, input[pos..<next_ch])
+      yield token(STRING, input[pos..<next_ch])
       pos = next_ch+1
     of '>':
       inc(pos)
       is_text = true
-      yield token(TAG_END, pos, $ch)
+      yield token(TAG_END)
     of '=':
       inc(pos)
-      yield token(EQUALS, pos, $ch)
+      yield token(EQUALS)
     of '/':
       if input[pos+1] == '>':
-        yield token(SIMPLE_TAG_CLOSE, pos, input[pos..pos+1])
+        yield token(SIMPLE_TAG_CLOSE)
         inc(pos, 2)
     else:
       if(is_text):
@@ -130,7 +128,7 @@ iterator tokens*(input: string): XmlToken {.inline.} =
           text_end = input.find('<', pos)
         if text_end == -1:
           error(fmt"unable to find ending point of text, started at {pos}")
-        yield token(TEXT, pos, input[pos..<text_end])
+        yield token(TEXT, input[pos..<text_end])
         pos = text_end
         is_text = false
       else:
@@ -143,7 +141,7 @@ iterator tokens*(input: string): XmlToken {.inline.} =
             name.add(c)
             inc(pos)
             c = input[pos]
-          yield token(NAME, name_start, name)
+          yield token(NAME, name)
           if not (c in NameIdentChars):
             dec(pos)
         inc(pos)
