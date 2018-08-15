@@ -36,6 +36,11 @@ template skip_until(c: char) =
   while(input[pos] != c):
     inc(pos)
 
+template skip_until(s: string) =
+  while(input[pos..<pos+s.len] != s):
+    inc(pos)
+
+
 iterator tokens*(input: string): XmlToken {.inline.} =
   var
     pos = 0
@@ -60,14 +65,15 @@ iterator tokens*(input: string): XmlToken {.inline.} =
           echo input[0..pos]
         of '!':
           inc(pos)
-          echo input[pos..pos+1]
           if input[pos..pos+5] == "[CDATA[":
-            # cdata
-            discard
+            # CDATA
+            echo input[pos..pos+5]
+            var token: XmlToken
+            token.kind = CDATA_BEGIN
+            yield token
           elif input[pos..pos+1] == "--":
-            echo "comment"
-            # commment
-            discard
+            # skips comment
+            skip_until("-->")
         else:
           discard
 
