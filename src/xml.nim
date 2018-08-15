@@ -2,7 +2,14 @@
 # Copyright Huy Doan
 # Pure Nim XML parser
 
+import strformat, strutils
+
+
+const NameIdentChars = IdentChars + {':', '-', '.'}
+
 type
+  XmlParserException* = object of Exception
+
   TokenKind* = enum
     TAG_BEGIN
     TAG_END
@@ -14,36 +21,35 @@ type
     EQUALS
     CDATA_BEGIN
     CDATA_END
-    EOF
 
   XmlToken* = object
     kind*: TokenKind
     text*: string
+    start*: int
 
-  XmlTokenizer* = object
-    input*: string
-    pos*: int
-    textParseMode*: bool
-    cdataMode*: bool
+template error(message: string) =
+  raise newException(XmlParserException, message)
 
-
-
-proc initXmlTokenizer(input: string): XmlTokenizer =
-  result.input = input
-  result.pos = 0
+proc token(kind: TokenKind, start: int, text = ""): XmlToken =
+  result.kind = kind
+  result.start = start
+  result.text = text
 
 template skip_until(c: char) =
   while(input[pos] != c):
     inc(pos)
 
 template skip_until(s: string) =
-  while(input[pos..<pos+s.len] != s):
+  let length = s.len
+  while(input[pos..<pos+length] != s):
     inc(pos)
+  inc(pos, length)
 
 
 iterator tokens*(input: string): XmlToken {.inline.} =
+  ## This iterator yield tokens that extracted from `input`
   var
-    pos = 0
+    pos: int
     length = input.len
     is_cdata = false
     is_text = false
@@ -52,9 +58,10 @@ iterator tokens*(input: string): XmlToken {.inline.} =
 
   while pos < length and input[pos] != '\0':
     let ch = input[pos]
+    if ch in Whitespace:
+      inc(pos)
+      continue
     case ch
-    #of ' ', '\t', '\r', '\n':
-    #  inc(pos)
     of '<':
       if not is_cdata:
         inc(pos)
@@ -62,34 +69,96 @@ iterator tokens*(input: string): XmlToken {.inline.} =
         of '?':
           # skips prologue
           skip_until('>')
-          echo input[0..pos]
+          # print out prologue
+          #echo input[0..pos]
+          inc(pos)
         of '!':
           inc(pos)
-          if input[pos..pos+5] == "[CDATA[":
+          if input[pos..pos+6] == "[CDATA[":
             # CDATA
-            echo input[pos..pos+5]
-            var token: XmlToken
-            token.kind = CDATA_BEGIN
-            yield token
+            is_cdata = true
+            is_text = true
+            yield token(CDATA_BEGIN, pos-2, input[pos-2..pos+6])
+            inc(pos, 6)
           elif input[pos..pos+1] == "--":
             # skips comment
+            let comment_start = pos-2
             skip_until("-->")
+            # print out full of comment
+            #echo input[comment_start..<pos]
+          else:
+            error(fmt"text expected, found ""{input[pos]}"" at {pos}")
+        of '/':
+          yield token(TAG_CLOSE, pos-1, input[pos-1..pos])
+          is_text = false
         else:
-          discard
-
+          dec(pos)
+          yield token(TAG_BEGIN, pos, $input[pos])
+          is_text = false
+        inc(pos)
     of ']':
+      if input[pos..pos+2] != "]]>":
+        error(fmt"cdata end ""]]>"" expected, found {input[pos..pos+2]} at {pos}")
       is_text =  true
       is_cdata = false
-    else:
+      yield token(CDATA_END, pos, input[pos..pos+2])
+      inc(pos, 3)
+    of '\'', '"':
       inc(pos)
-    var t: XmlToken
-    #  yield t
+      var next_ch = input.find(ch, pos)
+      if next_ch == -1:
+        error(fmt"unable to find matching string quote last found {pos}") 
+      yield token(STRING, pos, input[pos..<next_ch])
+      pos = next_ch+1
+    of '>':
+      inc(pos)
+      is_text = true
+      yield token(TAG_END, pos, $ch)
+    of '=':
+      inc(pos)
+      yield token(EQUALS, pos, $ch)
+    of '/':
+      if input[pos+1] == '>':
+        yield token(SIMPLE_TAG_CLOSE, pos, input[pos..pos+1])
+        inc(pos, 2)
+    else:
+      if(is_text):
+        var text_end = 0
+        if is_cdata:
+          text_end = input.find("]]>", pos)
+        else:
+          text_end = input.find('<', pos)
+        if text_end == -1:
+          error(fmt"unable to find ending point of text, started at {pos}")
+        yield token(TEXT, pos, input[pos..<text_end])
+        pos = text_end
+        is_text = false
+      else:
+        var
+          name = ""
+          name_start = pos
+        var c = input[pos]
+        if c in IdentStartChars:
+          while c in NameIdentChars:
+            name.add(c)
+            inc(pos)
+            c = input[pos]
+          yield token(NAME, name_start, name)
+          if not (c in NameIdentChars):
+            dec(pos)
+        inc(pos)
 
+proc tokens*(input: string): seq[XmlToken] =
+  result = @[]
+  for token in input.tokens:
+    result.add(token)
 
 when isMainModule:
   let xml = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- example -->
 <classes>
+    <simple-closed/>
+    <note><![CDATA[This text is CDATA<>]]></note>
     <class name="Klient">
         <attr type="int">id</attr>
         <attr type="String">imie</attr>
@@ -103,6 +172,7 @@ when isMainModule:
     </class>
 </classes>
 """
-
+  assert tokens(xml).len == 106
   for t in  xml.tokens:
     echo t
+
