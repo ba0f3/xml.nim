@@ -52,17 +52,20 @@ iterator tokens*(input: string): XmlToken {.inline.} =
     #  inc(pos)
     of '<':
       if not is_cdata:
-        case input[pos + 1]:
+        inc(pos)
+        case input[pos]:
         of '?':
           # skips prologue
           skip_until('>')
           echo input[0..pos]
         of '!':
-          echo input[pos..pos+6]
-          if input[pos..pos+6] == "[CDATA[":
+          inc(pos)
+          echo input[pos..pos+1]
+          if input[pos..pos+5] == "[CDATA[":
             # cdata
             discard
-          elif input[pos..pos+2] == "--":
+          elif input[pos..pos+1] == "--":
+            echo "comment"
             # commment
             discard
         else:
