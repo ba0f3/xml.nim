@@ -221,7 +221,10 @@ proc parseNode(tokens: seq[XmlToken], start = 0): (XmlNode, int) =
         node.setAttr(attrName, t.text)
     of TEXT:
       node.text = t.text
-    of SIMPLE_TAG_CLOSE, TAG_CLOSE:
+    of SIMPLE_TAG_CLOSE:
+      return (node, i)
+    of TAG_CLOSE:
+      assert tokens[i+1].text == node.name
       return (node, i)
     else:
       discard
