@@ -213,7 +213,7 @@ proc attr*(node: XmlNode, name: string): string =
 proc setAttr(node: XmlNode, name, value: string) =
   if node.attributes.isNil:
     node.attributes = newStringTable(modeCaseInsensitive)
-    node.attributes[name] = value
+  node.attributes[name] = value
 
 proc parseNode(tokens: seq[XmlToken], start = 0): (XmlNode, int) =
   var
