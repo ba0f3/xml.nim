@@ -111,7 +111,7 @@ iterator tokens*(input: string): XmlToken {.inline.} =
       inc(pos)
       var next_ch = input.find(ch, pos)
       if next_ch == -1:
-        error(fmt"unable to find matching string quote last found {pos}") 
+        error(fmt"unable to find matching string quote last found {pos}")
       yield token(STRING, input[pos..<next_ch])
       pos = next_ch+1
     of '>':

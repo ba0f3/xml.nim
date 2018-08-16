@@ -1,16 +1,13 @@
-import pegs, strutils, ../xml
+import strutils, ../xml
 from streams import newStringStream
 from strtabs import hasKey
 
-
-let
-  attribute = r"[a-zA-Z][a-zA-Z0-9_\-]*"
-  classes = r"{\.[a-zA-Z0-9_][a-zA-Z0-9_\-]*}"
-  attributes = r"{\[" & attribute & r"\s*([\*\^\$\~]?\=\s*[\'""]?(\s*\ident\s*)+[\'""]?)?\]}"
-  pselectors = peg(r"\s*{\ident}?({'#'\ident})? (" & classes & ")* " & attributes & "*")
-  pattributes = peg(r"{\[{" & attribute & r"}\s*({[\*\^\$\~]?}\=\s*[\'""]?{(\s*\ident\s*)+}[\'""]?)?\]}")
-
 type
+  TokenKind = enum
+    TAG
+    ID
+    CLASS
+    ATTR
   Attribute = object
     name: string
     operator: char
@@ -26,7 +23,18 @@ type
   QueryContext = object
     root: seq[XmlNode]
 
-proc newSelector(tag, id = "", classes: seq[string] = @[], attributes: seq[Attribute] = @[]): Selector =
+proc push(s: var Selector, kind: TokenKind, name: string) =
+  case kind
+  of TAG:
+    s.tag = name
+  of ID:
+    s.id = name
+  of CLASS:
+    s.classes.add(name)
+  else:
+    echo "parse attribute"
+
+proc newSelector*(tag, id = "", classes: seq[string] = @[], attributes: seq[Attribute] = @[]): Selector =
   result.combinator = ' '
   result.tag = tag
   result.id = id
@@ -140,32 +148,45 @@ proc searchCombined(parents: var seq[XmlNode], selectors: seq[Selector]) =
 
   parents = found
 
-proc parseSelector(token: string): Selector =
+proc parseSelector*(token: string): Selector =
   result = newSelector()
   # Universal selector
   if token == "*":
     result.tag = "*"
   # Type selector
-  elif token =~ pselectors:
-    for i in 0..matches.len-1:
-      if matches[i].isNil:
-        continue
-
-      let ch = matches[i][0]
-      case ch:
-      of '#':
-        matches[i].delete(0, 0)
-        result.id = matches[i]
-      of '.':
-        matches[i].delete(0, 0)
-        result.classes.add(matches[i])
-      of '[':
-        if matches[i] =~ pattributes:
-          result.attributes.add(newAttribute(matches[1], matches[2], matches[3]))
-      else:
-        result.tag = matches[i]
   else:
-    discard
+    var
+      pos: int
+      length = token.len
+      kind = TAG
+      name = ""
+      ch: char
+
+    while pos < length:
+      ch = token[pos]
+      if ch in Whitespace:
+        inc(pos)
+        continue
+      if ch in {'#', '.', '[', '=', ']'}:
+        result.push(kind, name)
+        if ch == '#':
+            kind = ID
+        elif ch == '.':
+            kind = CLASS
+        elif ch == '[':
+            kind = ATTR
+        name = ""
+        #echo "next ", kind
+      else:
+        #if name.len == 0:
+        #  assert ch in IdentStartChars
+        name.add(ch)
+
+        if pos == length-1:
+          result.push(kind, name)
+          break
+
+      inc(pos)
 
 proc select*(q: QueryContext, s: string = ""): seq[XmlNode] =
   ## Return list of nodes matched by CSS selector
