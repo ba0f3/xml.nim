@@ -35,9 +35,6 @@ type
 template error(message: string) =
   raise newException(XmlParserException, message)
 
-proc expect(tokens: seq[XmlToken], i: int, kind: TokenKind) {.inline.} =
-  if tokens[i].kind != kind:
-    error(fmt"{kind} expected, got {tokens[i].kind}")
 
 proc token(kind: TokenKind, text = ""): XmlToken =
   result.kind = kind
@@ -52,7 +49,6 @@ template skip_until(s: string) =
   while(input[pos..<pos+length] != s):
     inc(pos)
   inc(pos, length)
-
 
 iterator tokens*(input: string): XmlToken {.inline.} =
   ## This iterator yield tokens that extracted from `input`
@@ -199,73 +195,45 @@ proc setAttr(node: XmlNode, name, value: string) =
     node.attributes = newStringTable(modeCaseInsensitive)
     node.attributes[name] = value
 
-proc parseNode(tokens: seq[XmlToken], start: int): XmlNode =
+proc parseNode(tokens: seq[XmlToken], start = 0): (XmlNode, int) =
   var
+    node: XmlNode
     attrName: string
-    last: TokenKind
-    closed = false
-
   var i = start
 
-  expect(tokens, i, TAG_BEGIN)
+  assert tokens[start].kind == TAG_BEGIN
 
-  inc(i)
-  expect(tokens, i, NAME)
-
-  result = newNode(tokens[i].text)
-
-  inc(i)
-  while tokens[i].kind == NAME:
-    echo  fmt"I {i}"
-    attrName = tokens[i].text
-    inc(i)
-    expect(tokens, i, EQUALS)
-
-    inc(i)
-    expect(tokens, i, STRING)
-    result.setAttr(attrName, tokens[i].text)
-    inc(i)
-    echo tokens[i].kind
-
-  if tokens[i].kind == SIMPLE_TAG_CLOSE:
-    return result;
-
-  expect(tokens, i, TAG_END)
-
-  inc(i)
-  while tokens[i].kind != TAG_CLOSE:
-    case tokens[i].kind
-    of TEXT:
-      result.text = tokens[i].text
-    of CDATA_BEGIN:
-      inc(i)
-      expect(tokens, i, TEXT)
-      result.text = tokens[i].text
-      inc(i)
-      expect(tokens, i, CDATA_END)
+  while i < tokens.len:
+    let t = tokens[i]
+    case t.kind
     of TAG_BEGIN:
-      result.addChild(parseNode(tokens, i))
-      continue
+      if not node.isNil:
+        let (n, j) = parseNode(tokens, i)
+        node.addChild(n)
+        i = j
+    of NAME:
+      if tokens[i-1].kind == TAG_BEGIN:
+        node = newNode(t.text)
+      else:
+        attrName = t.text
+    of STRING:
+      if tokens[i-1].kind == EQUALS:
+        node.setAttr(attrName, t.text)
+    of TEXT:
+      node.text = t.text
+    of SIMPLE_TAG_CLOSE, TAG_CLOSE:
+      return (node, i)
     else:
-      error(fmt"unknown token kind {tokens[i].kind}")
+      discard
     inc(i)
-  inc(i)
-  expect(tokens, i, NAME)
-
-  if tokens[i].text != result.name:
-    error(fmt"Tag name not matched, expected '{result.name}', got 'tokens[i].text'")
-
-  inc(i)
-  expect(tokens, i, TAG_END)
-  inc(i)
-
-
 
 proc parseXml(input: string): XmlNode =
   ## this proc takes an XML `input` as string
   ## returns root XmlNode
   var tokens = tokens(input)
-  result = parseNode(tokens, 0)
+  #var (result, _) = parseNode(tokens, 0)
+  let (root, _) = parseNode(tokens)
+  result = root
 
 
 when isMainModule:
@@ -291,15 +259,27 @@ when isMainModule:
   #for t in xml.tokens:
   #  echo t
   var root = parseXml(xml)
-  echo root[]
   assert root.name == "classes"
   let
     simple = root.children[0]
     note = root.children[1]
+    class1 = root.children[2]
+    class2 = root.children[3]
 
   assert simple.name == "simple"
   assert simple.hasAttr("closed")
   assert simple.attr("closed") == "true"
   assert simple.text == ""
+
+  assert note.name == "note"
+  assert note.text == "This text is CDATA<>"
+
+  assert class1.hasAttr("name")
+  assert class1.children.len == 4
+
+  assert class1.children[3].hasAttr("type")
+  assert class1.children[3].attr("type") == "Date"
+
+
 
 
