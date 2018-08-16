@@ -1,23 +1,20 @@
-import pegs, xml
+import os, xml, xml/selector
 
-const example = """<?xml version="1.0" encoding="UTF-8"?>
-<classes>
-    <class name="Klient">
-        <attr type="int">id</attr>
-        <attr type="String">imie</attr>
-        <attr type="String">nazwisko</attr>
-        <attr type="Date">dataUr</attr>
-    </class>
-    <class name="Wizyta">
-        <attr type="int">id</attr>
-        <attr type="Klient">klient</attr>
-        <attr type="Date">data</attr>
-    </class>
-</classes>
-"""
+var d = q($readFile(getAppDir() & "/test.html"))
 
-var matches: seq[string] = @[]
-doAssert(example.match(grammar, matches))
 
-for m in matches:
-  echo m
+assert d.select("head *").len == 2
+echo d.select("head *")
+echo d.select("ul li a")
+echo d.select("ul.menu > li a")
+echo d.select("ul.menu > li > a")
+echo d.select("ul.menu.and > li > a")
+echo d.select("#link1")
+echo d.select("input[type]")
+echo d.select("input[type=password]")
+echo d.select("input[type='password']")
+echo d.select("input[type=\"password\"]")
+echo d.select("input[type^=pa]")
+echo d.select("input[type$=ord]")
+echo d.select("input[type*=ss]")
+echo d.select("nav ul.menu ~ div + a")
