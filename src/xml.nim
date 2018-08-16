@@ -173,6 +173,26 @@ proc child*(node: XmlNode, name: string): XmlNode =
         result = n
         break
 
+proc `$`*(node: XmlNode): string =
+  result = "<"
+  result.add(node.name)
+  if not node.attributes.isNil:
+    for k, v in node.attributes.pairs:
+      result.add(fmt" {k}=""{v}""")
+  if node.text.len == 0 and node.children.isNil:
+    result.add(" />")
+    return
+  elif node.text.len > 0:
+    result.add(">" & node.text)
+  else:
+    result.add(">")
+
+  if not node.children.isNil:
+    for child in node.children:
+      result.add($child)
+  result.add("</" & node.name & ">")
+
+
 proc addChild*(node, child: XmlNode) =
   if node.children.isNil:
     node.children = @[]
@@ -230,7 +250,7 @@ proc parseNode(tokens: seq[XmlToken], start = 0): (XmlNode, int) =
       discard
     inc(i)
 
-proc parseXml(input: string): XmlNode =
+proc parseXml*(input: string): XmlNode =
   ## this proc takes an XML `input` as string
   ## returns root XmlNode
   var tokens = tokens(input)
