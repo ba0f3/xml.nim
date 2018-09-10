@@ -163,23 +163,24 @@ proc newNode(name: string, text = ""): XmlNode =
   new(result)
   result.name = name
   result.text = text
+  result.attributes = newStringTable(modeCaseInsensitive)
+  result.children = @[]
 
 proc child*(node: XmlNode, name: string): XmlNode =
   ## finds the first element of `node` with name `name`
   ## returns `nil` on failure
-  if not node.children.isNil:
-    for n in node.children:
-      if n.name == name:
-        result = n
-        break
+  for n in node.children:
+    if n.name == name:
+      result = n
+      break
 
 proc `$`*(node: XmlNode): string =
   result = "<"
   result.add(node.name)
-  if not node.attributes.isNil:
-    for k, v in node.attributes.pairs:
-      result.add(fmt" {k}=""{v}""")
-  if node.text.len == 0 and node.children.isNil:
+
+  for k, v in node.attributes.pairs:
+    result.add(fmt" {k}=""{v}""")
+  if node.text.len == 0 and node.children.len == 0:
     result.add(" />")
     return
   elif node.text.len > 0:
@@ -187,32 +188,23 @@ proc `$`*(node: XmlNode): string =
   else:
     result.add(">")
 
-  if not node.children.isNil:
-    for child in node.children:
-      result.add($child)
+  for child in node.children:
+    result.add($child)
   result.add("</" & node.name & ">")
 
 
 proc addChild*(node, child: XmlNode) =
-  if node.children.isNil:
-    node.children = @[]
   node.children.add(child)
 
 proc hasAttr*(node: XmlNode, name: string): bool =
   ## returns `true` if `node` has attribute `name`
-  if node.attributes.isNil:
-    result = false
-  else:
-    result = node.attributes.hasKey(name)
+  result = node.attributes.hasKey(name)
 
 proc attr*(node: XmlNode, name: string): string =
   ## returns value of attribute `name`, returns "" on failure
-  if not node.attributes.isNil:
-    result = node.attributes.getOrDefault(name)
+  result = node.attributes.getOrDefault(name)
 
 proc setAttr(node: XmlNode, name, value: string) =
-  if node.attributes.isNil:
-    node.attributes = newStringTable(modeCaseInsensitive)
   node.attributes[name] = value
 
 proc parseNode(tokens: seq[XmlToken], start = 0): (XmlNode, int) =

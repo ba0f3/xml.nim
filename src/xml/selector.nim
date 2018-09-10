@@ -123,7 +123,7 @@ proc searchCombined(parent: XmlNode, selectors: seq[Selector], found: var seq[Xm
     matches = @[]
 
     for j in starts:
-      if parent.children.isNil:
+      if parent.children.len == 0:
         continue
       for k in j..parent.children.len-1:
         var child = parent.children[k]
