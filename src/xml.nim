@@ -111,7 +111,7 @@ iterator tokens*(input: string): XmlToken {.inline.} =
       inc(pos)
       var next_ch = input.find(ch, pos)
       if next_ch == -1:
-        error(fmt"unable to find matching string quote last found {pos}") 
+        error(fmt"unable to find matching string quote last found {pos}")
       yield token(STRING, input[pos..<next_ch])
       pos = next_ch+1
     of '>':
@@ -167,7 +167,7 @@ proc newNode(name: string, text = ""): XmlNode =
 proc child*(node: XmlNode, name: string): XmlNode =
   ## finds the first element of `node` with name `name`
   ## returns `nil` on failure
-  if not node.children.isNil:
+  if node.children.len > 0:
     for n in node.children:
       if n.name == name:
         result = n
@@ -179,7 +179,7 @@ proc `$`*(node: XmlNode): string =
   if not node.attributes.isNil:
     for k, v in node.attributes.pairs:
       result.add(fmt" {k}=""{v}""")
-  if node.text.len == 0 and node.children.isNil:
+  if node.text.len == 0 and node.children.len == 0:
     result.add(" />")
     return
   elif node.text.len > 0:
@@ -187,14 +187,14 @@ proc `$`*(node: XmlNode): string =
   else:
     result.add(">")
 
-  if not node.children.isNil:
+  if node.children.len > 0:
     for child in node.children:
       result.add($child)
   result.add("</" & node.name & ">")
 
 
 proc addChild*(node, child: XmlNode) =
-  if node.children.isNil:
+  if node.children.len == 0:
     node.children = @[]
   node.children.add(child)
 
@@ -302,7 +302,3 @@ when isMainModule:
 
   assert class1.children[3].hasAttr("type")
   assert class1.children[3].attr("type") == "Date"
-
-
-
-
