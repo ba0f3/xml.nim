@@ -1,13 +1,13 @@
 import pegs, strutils, ../xml
-from streams import newStringStream
-from strtabs import hasKey
 
-
-let
+const
   attribute = r"[a-zA-Z][a-zA-Z0-9_\-]*"
   classes = r"{\.[a-zA-Z0-9_][a-zA-Z0-9_\-]*}"
   attributes = r"{\[" & attribute & r"\s*([\*\^\$\~]?\=\s*[\'""]?(\s*\ident\s*)+[\'""]?)?\]}"
-  pselectors = peg(r"\s*{\ident}?({'#'\ident})? (" & classes & ")* " & attributes & "*")
+  selectors = r"\s*{\ident}?({'#'\ident})? (" & classes & ")* " & attributes & "*"
+
+let
+  pselectors = peg(selectors)
   pattributes = peg(r"{\[{" & attribute & r"}\s*({[\*\^\$\~]?}\=\s*[\'""]?{(\s*\ident\s*)+}[\'""]?)?\]}")
 
 type

@@ -57,11 +57,10 @@ iterator tokens*(input: string): XmlToken {.inline.} =
     length = input.len
     is_cdata = false
     is_text = false
-
-  var ch = input[pos]
+    ch: char
 
   while pos < length and input[pos] != '\0':
-    let ch = input[pos]
+    ch = input[pos]
     if ch in Whitespace:
       inc(pos)
       continue
@@ -86,7 +85,6 @@ iterator tokens*(input: string): XmlToken {.inline.} =
             inc(pos, 6)
           elif input[pos..pos+1] == "--":
             # skips comment
-            let comment_start = pos-2
             skip_until("-->")
             # print out full of comment
             #echo input[comment_start..<pos]
@@ -138,9 +136,7 @@ iterator tokens*(input: string): XmlToken {.inline.} =
         pos = text_end
         is_text = false
       else:
-        var
-          name = ""
-          name_start = pos
+        var name = ""
         var c = input[pos]
         if c in IdentStartChars:
           while c in NameIdentChars:
