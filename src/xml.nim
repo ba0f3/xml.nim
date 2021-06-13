@@ -8,7 +8,7 @@ import strformat, strutils, strtabs
 const NameIdentChars = IdentChars + {':', '-', '.'}
 
 type
-  XmlParserException* = object of Exception
+  XmlParserException* = object of CatchableError
 
   TokenKind* = enum
     TAG_BEGIN
@@ -74,7 +74,6 @@ iterator tokens*(input: string): XmlToken {.inline.} =
           skip_until('>')
           # print out prologue
           #echo input[0..pos]
-          inc(pos)
         of '!':
           inc(pos)
           if input[pos..pos+6] == "[CDATA[":
