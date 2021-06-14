@@ -41,14 +41,15 @@ proc token(kind: TokenKind, text = ""): XmlToken =
   result.text = text
 
 template skip_until(c: char) =
-  while(input[pos] != c):
-    inc(pos)
+  pos = input.find(c, pos)
+  if pos <= 0:
+    error("Invalid XML tag")
 
 template skip_until(s: string) =
-  let length = s.len
-  while(input[pos..<pos+length] != s):
-    inc(pos)
-  inc(pos, length)
+  pos = input.find(s, pos)
+  if pos <= 0:
+    error("Invalid XML tag")
+  inc(pos, s.len)
 
 iterator tokens*(input: string): XmlToken {.inline.} =
   ## This iterator yield tokens that extracted from `input`
