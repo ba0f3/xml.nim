@@ -6,7 +6,7 @@ const
   attributes = r"{\[" & attribute & r"\s*([\*\^\$\~]?\=\s*[\'""]?(\s*\ident\s*)+[\'""]?)?\]}"
   selectors = r"\s*{\ident}?({'#'\ident})? (" & classes & ")* " & attributes & "*"
 
-let
+const
   pselectors = peg(selectors)
   pattributes = peg(r"{\[{" & attribute & r"}\s*({[\*\^\$\~]?}\=\s*[\'""]?{(\s*\ident\s*)+}[\'""]?)?\]}")
 

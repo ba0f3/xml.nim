@@ -274,27 +274,28 @@ when isMainModule:
     </class>
 </classes>
 """
-  assert tokens(xml).len == 109
-  #for t in xml.tokens:
-  #  echo t
-  var root = parseXml(xml)
-  assert root.name == "classes"
-  let
-    simple = root.children[0]
-    note = root.children[1]
-    class1 = root.children[2]
-    class2 = root.children[3]
+  static:
+    assert tokens(xml).len == 109
+    #for t in xml.tokens:
+    #  echo t
+    var root = parseXml(xml)
+    assert root.name == "classes"
+    let
+      simple = root.children[0]
+      note = root.children[1]
+      class1 = root.children[2]
+      class2 = root.children[3]
 
-  assert simple.name == "simple"
-  assert simple.hasAttr("closed")
-  assert simple.attr("closed") == "true"
-  assert simple.text == ""
+    assert simple.name == "simple"
+    assert simple.hasAttr("closed")
+    assert simple.attr("closed") == "true"
+    assert simple.text == ""
 
-  assert note.name == "note"
-  assert note.text == "This text is CDATA<>"
+    assert note.name == "note"
+    assert note.text == "This text is CDATA<>"
 
-  assert class1.hasAttr("name")
-  assert class1.children.len == 4
+    assert class1.hasAttr("name")
+    assert class1.children.len == 4
 
-  assert class1.children[3].hasAttr("type")
-  assert class1.children[3].attr("type") == "Date"
+    assert class1.children[3].hasAttr("type")
+    assert class1.children[3].attr("type") == "Date"
