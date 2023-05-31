@@ -236,6 +236,8 @@ proc parseNode(tokens: seq[XmlToken], start = 0): (XmlNode, int) =
       if tokens[i-1].kind == EQUALS:
         node.setAttr(attrName, t.text)
     of TEXT:
+      if tokens[i-1].kind != TAG_CLOSE:
+        error("TAG_CLOSE expected before TEXT, got: " & $tokens[i-1].kind & " text: \"" & t.text & "\"")
       node.text = t.text
     of SIMPLE_TAG_CLOSE:
       return (node, i)

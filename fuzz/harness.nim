@@ -5,7 +5,8 @@ proc do_parse(input: string): bool =
     var root = parseXml(input)
     return root != nil and root.name.len > 0
   except XmlParserException:
-    return false;
+    echo getCurrentExceptionMsg()
+    return false
 
 when isMainModule:
   let input = readAll(stdin);
